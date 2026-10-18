@@ -50,3 +50,8 @@ if errorlevel 1 exit 1
 
 ninja -C builddir install -j %CPU_COUNT%
 if errorlevel 1 exit 1
+
+:: rattler-build does not install recipe-side post-link scripts automatically.
+if not exist "%PREFIX%\Scripts" mkdir "%PREFIX%\Scripts"
+copy /Y "%RECIPE_DIR%\post-link.bat" "%PREFIX%\Scripts\.gtk4-post-link.bat"
+if errorlevel 1 exit 1

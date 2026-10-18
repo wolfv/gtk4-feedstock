@@ -12,7 +12,7 @@ source:
   sha256: e98abe720e16129c8c0f50761dee0a2e9ae2478055e31018f6cf977fcf6513e9
 
 build:
-  number: 1
+  number: 2
   dynamic_linking:
     missing_dso_allowlist:
       - if: osx
@@ -104,6 +104,14 @@ tests:
       - gtk4-update-icon-cache --help
       - if: unix
         then: gtk4-launch --help
+      # Exercise the hook explicitly even when the installer disables link scripts.
+      - if: unix
+        then: bash "$PREFIX/bin/.gtk4-post-link.sh"
+        else: call "%PREFIX%\Scripts\.gtk4-post-link.bat"
+      - python run_test.py
+    files:
+      recipe:
+        - run_test.py
     requirements:
       run:
         - pygobject
@@ -121,6 +129,7 @@ tests:
       files:
         - if: unix
           then:
+            - bin/.gtk4-post-link.sh
             - lib/pkgconfig/gtk4.pc
             - lib/pkgconfig/gtk4-unix-print.pc
             - lib/girepository-1.0/Gdk-4.0.typelib
@@ -132,6 +141,7 @@ tests:
           then: lib/pkgconfig/gtk4-macos.pc
         - if: win
           then:
+            - Scripts/.gtk4-post-link.bat
             - Library/lib/pkgconfig/gtk4.pc
             - Library/lib/pkgconfig/gtk4-win32.pc
             - Library/lib/girepository-1.0/Gdk-4.0.typelib

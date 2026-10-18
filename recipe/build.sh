@@ -43,3 +43,7 @@ meson setup builddir \
 meson configure builddir
 ninja -v -C builddir -j ${CPU_COUNT}
 ninja -C builddir install -j ${CPU_COUNT}
+
+# rattler-build does not install recipe-side post-link scripts automatically.
+cp "$RECIPE_DIR/post-link.sh" "$PREFIX/bin/.gtk4-post-link.sh"
+chmod +x "$PREFIX/bin/.gtk4-post-link.sh"
