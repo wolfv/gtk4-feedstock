@@ -10,9 +10,11 @@ package:
 source:
   url: https://download.gnome.org/sources/${{ name }}/${{ version_majmin }}/${{ name }}-${{ version }}.tar.xz
   sha256: e98abe720e16129c8c0f50761dee0a2e9ae2478055e31018f6cf977fcf6513e9
+  patches:
+    - private-schemas.patch
 
 build:
-  number: 1
+  number: 3
   dynamic_linking:
     missing_dso_allowlist:
       - if: osx
@@ -104,6 +106,10 @@ tests:
       - gtk4-update-icon-cache --help
       - if: unix
         then: gtk4-launch --help
+      - python run_test.py
+    files:
+      recipe:
+        - run_test.py
     requirements:
       run:
         - pygobject
@@ -121,6 +127,7 @@ tests:
       files:
         - if: unix
           then:
+            - share/gtk-4.0/schemas/gschemas.compiled
             - lib/pkgconfig/gtk4.pc
             - lib/pkgconfig/gtk4-unix-print.pc
             - lib/girepository-1.0/Gdk-4.0.typelib
@@ -132,6 +139,7 @@ tests:
           then: lib/pkgconfig/gtk4-macos.pc
         - if: win
           then:
+            - Library/share/gtk-4.0/schemas/gschemas.compiled
             - Library/lib/pkgconfig/gtk4.pc
             - Library/lib/pkgconfig/gtk4-win32.pc
             - Library/lib/girepository-1.0/Gdk-4.0.typelib

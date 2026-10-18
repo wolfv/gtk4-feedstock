@@ -43,3 +43,7 @@ meson setup builddir \
 meson configure builddir
 ninja -v -C builddir -j ${CPU_COUNT}
 ninja -C builddir install -j ${CPU_COUNT}
+
+# Keep GTK's precompiled schemas separate from the environment-wide cache.
+mkdir -p "$PREFIX/share/gtk-4.0/schemas"
+cp builddir/gtk/gschemas.compiled "$PREFIX/share/gtk-4.0/schemas/gschemas.compiled"

@@ -1,0 +1,150 @@
+diff --git a/gtk/gtkcolorchooserwidget.c b/gtk/gtkcolorchooserwidget.c
+index e34e22e..b406f90 100644
+--- a/gtk/gtkcolorchooserwidget.c
++++ b/gtk/gtkcolorchooserwidget.c
+@@ -587,7 +587,7 @@ gtk_color_chooser_widget_init (GtkColorChooserWidget *cc)
+                                   -1);
+   gtk_box_append (GTK_BOX (box), button);
+ 
+-  cc->settings = g_settings_new ("org.gtk.gtk4.Settings.ColorChooser");
++  cc->settings = _gtk_settings_new ("org.gtk.gtk4.Settings.ColorChooser");
+   variant = g_settings_get_value (cc->settings, I_("custom-colors"));
+   g_variant_iter_init (&iter, variant);
+   i = 0;
+diff --git a/gtk/gtkemojichooser.c b/gtk/gtkemojichooser.c
+index 12598db..2959dd4 100644
+--- a/gtk/gtkemojichooser.c
++++ b/gtk/gtkemojichooser.c
+@@ -1070,7 +1070,7 @@ gtk_emoji_chooser_init (GtkEmojiChooser *chooser)
+   GtkAdjustment *adj;
+   GtkText *text;
+ 
+-  chooser->settings = g_settings_new ("org.gtk.gtk4.Settings.EmojiChooser");
++  chooser->settings = _gtk_settings_new ("org.gtk.gtk4.Settings.EmojiChooser");
+ 
+   gtk_widget_init_template (GTK_WIDGET (chooser));
+ 
+diff --git a/gtk/gtkfilechooserutils.c b/gtk/gtkfilechooserutils.c
+index 30bdef5..6e26372 100644
+--- a/gtk/gtkfilechooserutils.c
++++ b/gtk/gtkfilechooserutils.c
+@@ -314,7 +314,7 @@ _gtk_file_chooser_get_settings_for_widget (GtkWidget *widget)
+ 
+   if (G_UNLIKELY (settings == NULL))
+     {
+-      settings = g_settings_new ("org.gtk.gtk4.Settings.FileChooser");
++      settings = _gtk_settings_new ("org.gtk.gtk4.Settings.FileChooser");
+       g_settings_delay (settings);
+ 
+       g_object_set_qdata_full (G_OBJECT (gtksettings),
+diff --git a/gtk/gtkprivate.c b/gtk/gtkprivate.c
+index 8579923..d523085 100644
+--- a/gtk/gtkprivate.c
++++ b/gtk/gtkprivate.c
+@@ -67,6 +67,51 @@ _gtk_get_data_prefix (void)
+ 
+ #endif
+ 
++GSettingsSchema *
++_gtk_settings_schema_lookup (const char *schema_id)
++{
++  GSettingsSchemaSource *source = g_settings_schema_source_get_default ();
++  GSettingsSchema *schema = NULL;
++
++  if (source != NULL)
++    schema = g_settings_schema_source_lookup (source, schema_id, TRUE);
++
++  if (schema == NULL)
++    {
++      char *path = g_build_filename (_gtk_get_datadir (), "gtk-4.0", "schemas", NULL);
++      GError *error = NULL;
++
++      source = g_settings_schema_source_new_from_directory (path, NULL, FALSE, &error);
++      if (source != NULL)
++        {
++          schema = g_settings_schema_source_lookup (source, schema_id, FALSE);
++          g_settings_schema_source_unref (source);
++        }
++      else
++        {
++          g_warning ("Could not load GTK settings schemas from %s: %s", path, error->message);
++          g_error_free (error);
++        }
++      g_free (path);
++    }
++
++  return schema;
++}
++
++GSettings *
++_gtk_settings_new (const char *schema_id)
++{
++  GSettingsSchema *schema = _gtk_settings_schema_lookup (schema_id);
++  GSettings *settings;
++
++  if (schema == NULL)
++    g_error ("Settings schema '%s' is not installed", schema_id);
++
++  settings = g_settings_new_full (schema, NULL, NULL);
++  g_settings_schema_unref (schema);
++  return settings;
++}
++
+ /* _gtk_get_lc_ctype:
+  *
+  * Return the Unix-style locale string for the language currently in
+diff --git a/gtk/gtkprivate.h b/gtk/gtkprivate.h
+index ad5c9e8..1fc0335 100644
+--- a/gtk/gtkprivate.h
++++ b/gtk/gtkprivate.h
+@@ -57,6 +57,9 @@ const char * _gtk_get_sysconfdir         (void);
+ const char * _gtk_get_localedir          (void);
+ const char * _gtk_get_data_prefix        (void);
+ 
++GSettingsSchema * _gtk_settings_schema_lookup (const char *schema_id);
++GSettings *       _gtk_settings_new           (const char *schema_id);
++
+ gboolean      _gtk_fnmatch                (const char *pattern,
+                                            const char *string,
+                                            gboolean    no_leading_period,
+diff --git a/gtk/gtkwindow.c b/gtk/gtkwindow.c
+index 8c3a62c..2196afd 100644
+--- a/gtk/gtkwindow.c
++++ b/gtk/gtkwindow.c
+@@ -6514,9 +6514,7 @@ inspector_keybinding_enabled (gboolean *warn)
+   enabled = TRUE;
+   *warn = TRUE;
+ 
+-  schema = g_settings_schema_source_lookup (g_settings_schema_source_get_default (),
+-                                            "org.gtk.gtk4.Settings.Debug",
+-                                            TRUE);
++  schema = _gtk_settings_schema_lookup ("org.gtk.gtk4.Settings.Debug");
+ 
+   if (schema)
+     {
+@@ -6536,9 +6534,7 @@ set_warn_again (gboolean warn)
+   GSettingsSchema *schema;
+   GSettings *settings;
+ 
+-  schema = g_settings_schema_source_lookup (g_settings_schema_source_get_default (),
+-                                            "org.gtk.gtk4.Settings.Debug",
+-                                            TRUE);
++  schema = _gtk_settings_schema_lookup ("org.gtk.gtk4.Settings.Debug");
+ 
+   if (schema)
+     {
+diff --git a/gtk/inspector/recorder.c b/gtk/inspector/recorder.c
+index a61331d..dd0c6ae 100644
+--- a/gtk/inspector/recorder.c
++++ b/gtk/inspector/recorder.c
+@@ -2726,9 +2726,7 @@ gtk_inspector_recorder_init (GtkInspectorRecorder *recorder)
+   g_object_unref (factory);
+   g_object_unref (column);
+ 
+-  schema = g_settings_schema_source_lookup (g_settings_schema_source_get_default (),
+-                                            "org.gtk.gtk4.Inspector.Recorder",
+-                                            TRUE);
++  schema = _gtk_settings_schema_lookup ("org.gtk.gtk4.Inspector.Recorder");
+   if (schema)
+     {
+       recorder->settings = g_settings_new_full (schema, NULL, NULL);

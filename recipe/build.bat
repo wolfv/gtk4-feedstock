@@ -50,3 +50,9 @@ if errorlevel 1 exit 1
 
 ninja -C builddir install -j %CPU_COUNT%
 if errorlevel 1 exit 1
+
+:: Keep GTK's precompiled schemas separate from the environment-wide cache.
+mkdir "%LIBRARY_PREFIX%\share\gtk-4.0\schemas"
+if errorlevel 1 exit 1
+copy /Y "builddir\gtk\gschemas.compiled" "%LIBRARY_PREFIX%\share\gtk-4.0\schemas\gschemas.compiled"
+if errorlevel 1 exit 1
