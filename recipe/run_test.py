@@ -33,8 +33,8 @@ for name in ("Settings.FileChooser", "Settings.ColorChooser", "Settings.EmojiCho
     default = Gio.SettingsSchemaSource.get_default()
     assert default is None or default.lookup(schema_id, True) is None
 
-# Native desktop runners also exercise GTK's fallback, not just the cache format.
-if Gtk.init_check():
+# PyGObject may already have attempted init; check the actual display too.
+if Gtk.init_check() and Gdk.Display.get_default() is not None:
     dialog = Gtk.FileChooserDialog(action=Gtk.FileChooserAction.SAVE)
     settings = Gio.Settings.new_full(
         source.lookup("org.gtk.gtk4.Settings.ColorChooser", False), None, None
