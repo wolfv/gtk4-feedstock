@@ -34,6 +34,22 @@ for previous in (None, "", os.pathsep.join(("custom schemas", "other schemas")))
         command = (f'call "{activate}" && "{sys.executable}" -c "{active_check}" && '
                    f'call "{deactivate}" && "{sys.executable}" -c "{restored_check}"')
         subprocess.run(command, shell=True, env=env, check=True)
+        env.update(
+            GTK4_TEST_ACTIVATE=str(activate.with_suffix(".ps1")),
+            GTK4_TEST_DEACTIVATE=str(deactivate.with_suffix(".ps1")),
+            GTK4_TEST_PYTHON=sys.executable,
+            GTK4_TEST_ACTIVE=active_check,
+            GTK4_TEST_RESTORED=restored_check,
+        )
+        subprocess.run([
+            "powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", """
+. $env:GTK4_TEST_ACTIVATE
+& $env:GTK4_TEST_PYTHON -c $env:GTK4_TEST_ACTIVE
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+. $env:GTK4_TEST_DEACTIVATE
+& $env:GTK4_TEST_PYTHON -c $env:GTK4_TEST_RESTORED
+exit $LASTEXITCODE
+"""], env=env, check=True)
     else:
         subprocess.run([
             "sh", "-ec", '. "$1"; "$3" -c "$4"; . "$2"; "$3" -c "$5"', "activation-test",
@@ -41,6 +57,13 @@ for previous in (None, "", os.pathsep.join(("custom schemas", "other schemas")))
             str(scripts / "deactivate.d/zz-gtk4_deactivate.sh"),
             sys.executable, active_check, restored_check,
         ], env=env, check=True)
+        if shutil.which("fish"):
+            subprocess.run([
+                "fish", "-c", 'source "$argv[1]"; "$argv[3]" -c "$argv[4]"; or exit 1; source "$argv[2]"; "$argv[3]" -c "$argv[5]"', "--",
+                str(scripts / "activate.d/zz-gtk4_activate.fish"),
+                str(scripts / "deactivate.d/zz-gtk4_deactivate.fish"),
+                sys.executable, active_check, restored_check,
+            ], env=env, check=True)
 
 import gi
 
@@ -67,6 +90,9 @@ if Gtk.init_check() and Gdk.Display.get_default() is not None:
     assert color.get_rgba().red == 1. and color.get_rgba().green == 0.
     emoji = Gtk.EmojiChooser()
     dialog.destroy()
+    print("GTK choosers and saved preferences passed")
+else:
+    print("No display: skipping chooser and saved-preference checks")
 
 # Existing earlier search paths and their overrides must keep precedence.
 shutil.copy(data_prefix / "share/glib-2.0/schemas/org.gtk.gtk4.Settings.ColorChooser.gschema.xml", isolated.name)
@@ -81,4 +107,4 @@ color = Gio.Settings.new('org.gtk.gtk4.Settings.ColorChooser')
 assert color.get_value('selected-color').unpack() == (True, 0., 1., 0., 1.)
 """], env=dict(os.environ, GSETTINGS_SCHEMA_DIR=isolated.name + os.pathsep + os.environ["GSETTINGS_SCHEMA_DIR"]), check=True)
 assert cache.read_bytes() == before
-print("Schema discovery, activation/restoration, preferences and overrides passed")
+print("Schema discovery, activation/restoration and overrides passed")
