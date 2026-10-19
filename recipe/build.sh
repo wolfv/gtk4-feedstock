@@ -44,6 +44,14 @@ meson configure builddir
 ninja -v -C builddir -j ${CPU_COUNT}
 ninja -C builddir install -j ${CPU_COUNT}
 
-# Keep GTK's precompiled schemas separate from the environment-wide cache.
-mkdir -p "$PREFIX/share/gtk-4.0/schemas"
-cp builddir/gtk/gschemas.compiled "$PREFIX/share/gtk-4.0/schemas/gschemas.compiled"
+# Compile only GTK-owned schemas, without writing the shared environment cache.
+mkdir -p "$PREFIX/share/gtk-4.0/schemas" builddir/gtk4-schemas
+cp gtk/*.gschema.xml demos/gtk-demo/*.gschema.xml builddir/gtk4-schemas/
+"$BUILD_PREFIX/bin/glib-compile-schemas" --strict \
+    --targetdir="$PREFIX/share/gtk-4.0/schemas" builddir/gtk4-schemas
+
+mkdir -p "$PREFIX/etc/conda/activate.d" "$PREFIX/etc/conda/deactivate.d"
+for shell in sh fish; do
+    cp "$RECIPE_DIR/activate.$shell" "$PREFIX/etc/conda/activate.d/zz-gtk4_activate.$shell"
+    cp "$RECIPE_DIR/deactivate.$shell" "$PREFIX/etc/conda/deactivate.d/zz-gtk4_deactivate.$shell"
+done

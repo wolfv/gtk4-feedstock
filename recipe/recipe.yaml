@@ -10,11 +10,9 @@ package:
 source:
   url: https://download.gnome.org/sources/${{ name }}/${{ version_majmin }}/${{ name }}-${{ version }}.tar.xz
   sha256: e98abe720e16129c8c0f50761dee0a2e9ae2478055e31018f6cf977fcf6513e9
-  patches:
-    - private-schemas.patch
 
 build:
-  number: 3
+  number: 4
   dynamic_linking:
     missing_dso_allowlist:
       - if: osx
@@ -37,6 +35,7 @@ requirements:
     - meson
     - ninja
     - gobject-introspection
+    - glib-tools
     - packaging  # workaround: this is needed for glib's gdbus-codegen
     - pkg-config
     - shaderc
@@ -128,6 +127,10 @@ tests:
         - if: unix
           then:
             - share/gtk-4.0/schemas/gschemas.compiled
+            - etc/conda/activate.d/zz-gtk4_activate.sh
+            - etc/conda/activate.d/zz-gtk4_activate.fish
+            - etc/conda/deactivate.d/zz-gtk4_deactivate.sh
+            - etc/conda/deactivate.d/zz-gtk4_deactivate.fish
             - lib/pkgconfig/gtk4.pc
             - lib/pkgconfig/gtk4-unix-print.pc
             - lib/girepository-1.0/Gdk-4.0.typelib
@@ -140,6 +143,10 @@ tests:
         - if: win
           then:
             - Library/share/gtk-4.0/schemas/gschemas.compiled
+            - etc/conda/activate.d/zz-gtk4_activate.bat
+            - etc/conda/activate.d/zz-gtk4_activate.ps1
+            - etc/conda/deactivate.d/zz-gtk4_deactivate.bat
+            - etc/conda/deactivate.d/zz-gtk4_deactivate.ps1
             - Library/lib/pkgconfig/gtk4.pc
             - Library/lib/pkgconfig/gtk4-win32.pc
             - Library/lib/girepository-1.0/Gdk-4.0.typelib
